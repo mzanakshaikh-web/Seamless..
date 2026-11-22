@@ -1,40 +1,62 @@
-name: Deploy Seamless
+
+name: Build Seamless APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get repository
+      - name: Get Seamless source
         uses: actions/checkout@v4
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Seamless website
-        uses: actions/upload-pages-artifact@v3
+      - name: Install Java
+        uses: actions/setup-java@v4
         with:
-          path: .
+          distribution: temurin
+          java-version: 17
 
-      - name: Publish Seamless
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare Capacitor
+        run: |
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/android@6
+          npm install --save-dev @capacitor/cli@6
+
+      - name: Prepare the web app
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+
+      - name: Create Android project
+        run: |
+          npx cap init Seamless com.shaikh.seamless --web-dir www
+          npx cap add android
+          npx cap sync android
+
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Seamless APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Seamless-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
