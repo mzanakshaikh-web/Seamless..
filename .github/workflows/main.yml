@@ -2,46 +2,43 @@
 name: Build Seamless APK
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Get Seamless source
         uses: actions/checkout@v4
 
-      - name: Install Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Install Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Prepare Capacitor
-        run: |
-          npm init -y
-          npm install @capacitor/core@6 @capacitor/android@6
-          npm install --save-dev @capacitor/cli@6
 
       - name: Prepare the web app
         run: |
           mkdir -p www
           cp index.html www/index.html
+
+      - name: Install Capacitor
+        run: |
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/android@6
+          npm install --save-dev @capacitor/cli@6
 
       - name: Create Android project
         run: |
@@ -49,13 +46,13 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Build Android APK
+      - name: Build APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload Seamless APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Seamless-APK
